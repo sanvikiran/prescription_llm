@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  prescription-processor:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - FLASK_ENV=production
+      - FLASK_DEBUG=false
+    volumes:
+      - ./pipeline_output:/app/pipeline_output
+      - ./results.json:/app/results.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  pipeline_output:

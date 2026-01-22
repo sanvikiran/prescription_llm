@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        .upload-area {
+            border: 1px solid #333;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #666;
+            background-color: #0a0a0a;
+        }
+
+        .upload-area.dragover {
+            border-color: #999;
+            background-color: #1a1a1a;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-weight: 400;
+        }
+
+        .upload-hint {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .file-list {
+            margin-bottom: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
+            font-size: 13px;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item .name {
+            flex: 1;
+            color: #ccc;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-item .remove {
+            color: #888;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+
+        .file-item .remove:hover {
+            color: #fff;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            border-color: #666;
+            background-color: #1a1a1a;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            display: none;
+            padding: 15px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .result.success {
+            border-color: #333;
+            display: block;
+        }
+
+        .result.error {
+            border-color: #622;
+            background: #1a0a0a;
+            display: block;
+        }
+
+        .result.loading {
+            border-color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1px solid #666;
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result-title {
+            margin-bottom: 8px;
+        }
+
+        .json-output {
+            background: #000;
+            border: 1px solid #222;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #888;
+        }
+
+        .copy-button {
+            background: transparent;
+            border: 1px solid #333;
+            color: #ccc;
+            padding: 6px 8px;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+
+        .copy-button:hover {
+            border-color: #666;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PRESCRIPTION PROCESSOR</h1>
+        </div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-text">Click or drag image</div>
+                <div class="upload-hint">PNG, JPG, WebP (max 10MB)</div>
+                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.gif,.tiff,.tif,.webp">
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="button-group">
+                <button type="submit" id="submitBtn">PROCESS</button>
+                <button type="button" id="clearBtn">CLEAR</button>
+            </div>
+        </form>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const resultDiv = document.getElementById('result');
+        let selectedFiles = [];
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            selectedFiles = Array.from(e.target.files);
+            updateFileList();
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            selectedFiles = Array.from(e.dataTransfer.files).filter(f => {
+                const ext = f.name.split('.').pop().toLowerCase();
+                return ['png', 'jpg', 'jpeg', 'bmp', 'gif', 'tiff', 'tif', 'webp'].includes(ext);
+            });
+            updateFileList();
+        });
+
+        function updateFileList() {
+            fileList.innerHTML = selectedFiles.map((file, idx) => `
+                <div class="file-item">
+                    <span class="name">${file.name}</span>
+                    <span class="remove" data-idx="${idx}">✕</span>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.file-item .remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    selectedFiles.splice(idx, 1);
+                    updateFileList();
+                });
+            });
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (selectedFiles.length === 0) {
+                showResult('error', 'Select an image');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            showResult('loading', '<span class="spinner"></span> processing...');
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('success', formatResult(data));
+                } else {
+                    showResult('error', data.error || 'Error');
+                }
+            } catch (error) {
+                showResult('error', `Error: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            selectedFiles = [];
+            fileInput.value = '';
+            updateFileList();
+            resultDiv.classList.remove('success', 'error', 'loading');
+            resultDiv.style.display = 'none';
+        });
+
+        function showResult(type, message) {
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+            resultDiv.style.display = 'block';
+        }
+
+        function formatResult(data) {
+            const status = data.status || 'unknown';
+            
+            let html = `
+                <div class="result-title">Status: ${status}</div>
+                <button class="copy-button" onclick="copyToClipboard()">COPY JSON</button>
+                <div class="json-output" id="jsonOutput">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            return html;
+        }
+
+        function copyToClipboard() {
+            const jsonOutput = document.getElementById('jsonOutput');
+            const text = jsonOutput.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied!');
+            });
+        }
+    </script>
+</body>
+</html>

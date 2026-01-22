@@ -1,0 +1,23 @@
+# Prescription Processing Pipeline Requirements
+
+# Core OCR
+surya-ocr>=0.1.0
+
+# LLM API
+requests>=2.31.0
+
+# Image Processing
+pillow>=10.0.0
+opencv-python>=4.8.0
+
+# Web Interface
+flask>=3.0.0
+werkzeug>=3.0.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Optional: for better performance
+python-dotenv>=1.0.0  # for .env file support
+gunicorn>=21.0.0      # for production deployment
